@@ -16,8 +16,25 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("[%s] %s %s %s", time.Now().Format(time.RFC3339), r.Method, r.URL.String(), r.UserAgent())
-		fmt.Fprintln(w, "ok")
+		q := r.URL.Query()
+
+		code := http.StatusOK
+		if c := q.Get("code"); c != "" {
+			if n, err := fmt.Sscanf(c, "%d", &code); err != nil || n != 1 {
+				code = http.StatusOK
+			}
+		}
+
+		if d := q.Get("delay"); d != "" {
+			var secs int
+			if n, err := fmt.Sscanf(d, "%d", &secs); err == nil && n == 1 {
+				time.Sleep(time.Duration(secs) * time.Second)
+			}
+		}
+
+		log.Printf("[%s] %d %s %s %s", time.Now().Format(time.RFC3339), code, r.Method, r.URL.String(), r.UserAgent())
+		w.WriteHeader(code)
+		fmt.Fprintln(w, http.StatusText(code))
 	})
 
 	addr := ":" + port
